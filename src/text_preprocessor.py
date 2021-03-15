@@ -8,7 +8,7 @@ import multiprocessing as mp
 from sklearn.base import TransformerMixin, BaseEstimator
 import spacy
 from spacy.tokens import Doc
-from typing import Dict
+from typing import Dict, List
 
 
 class TextPreprocessor(BaseEstimator, TransformerMixin):
@@ -25,7 +25,8 @@ class TextPreprocessor(BaseEstimator, TransformerMixin):
                  nlp: spacy.Language = None,
                  variety: str = 'BrE',
                  user_abbrevs: Dict = None,
-                 n_jobs: int = 1):
+                 custom_stop_words: List[str] = None,
+                 n_jobs: int = 0):
         """
         Adapted from:
         https://towardsdatascience.com/text-preprocessing-steps-and-universal-pipeline-94233cb6725a
@@ -38,6 +39,8 @@ class TextPreprocessor(BaseEstimator, TransformerMixin):
         self._nlp = nlp
         self.variety = variety
         self.user_abbrevs = user_abbrevs or {}
+        self.custom_stop_words = custom_stop_words
+
         self.n_jobs = n_jobs
 
     @property
@@ -45,6 +48,9 @@ class TextPreprocessor(BaseEstimator, TransformerMixin):
         if self._nlp is None:
             # load spacy language vectors
             self._nlp = spacy.load('en_core_web_lg')
+            for stop_word in self.custom_stop_words:
+                self._nlp.vocab[stop_word].is_stop = True
+            # self._nlp.Defaults.stop_words |= set(self.custom_stop_words)
         return self._nlp
 
     def fit(self, X, y=None):
@@ -53,12 +59,10 @@ class TextPreprocessor(BaseEstimator, TransformerMixin):
     def transform(self, X, *_):
         X_copy = X.copy()
 
-        partitions = 1
-        # cores = mp.cpu_count()
-        cores = 2
+        cores = mp.cpu_count()
         if self.n_jobs <= -1:
             partitions = cores
-        elif self.n_jobs <= 0:
+        elif self.n_jobs == 0:
             return X_copy.apply(self._preprocess_text)
         else:
             partitions = min(self.n_jobs, cores)
@@ -77,7 +81,8 @@ class TextPreprocessor(BaseEstimator, TransformerMixin):
     def _preprocess_text(self, text: str):
         normalized_text = self._normalize(text)
 
-        removed_links = self._remove_links(normalized_text)
+        removed_ats = self._remove_tweet_at_mentions(normalized_text)
+        removed_links = self._remove_links(removed_ats)
         removed_emojis = self._remove_emojis(removed_links)
         removed_numbers = self._remove_numbers(removed_emojis)
         removed_punct = self._remove_punct(removed_numbers)
@@ -94,6 +99,10 @@ class TextPreprocessor(BaseEstimator, TransformerMixin):
             return ' '.join(normalise(text, variety=self.variety, user_abbrevs=self.user_abbrevs, verbose=False))
         except:
             return text.lower()
+
+    @staticmethod
+    def _remove_tweet_at_mentions(s: str):
+        return re.sub(r'@\S+', '', s)
 
     @staticmethod
     def _remove_links(s: str):
@@ -120,5 +129,5 @@ class TextPreprocessor(BaseEstimator, TransformerMixin):
         return re.sub(r'\s{2,}', ' ', s)
 
     @staticmethod
-    def _lemmatize(doc: Doc):
+    def _lemmatize(doc: List):
         return ' '.join([t.lemma_ for t in doc])
