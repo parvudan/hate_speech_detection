@@ -15,7 +15,9 @@ from src.plot_utils import plot_categories, plot_w2v
 
 if __name__ == '__main__':
     # load data
-    df = pd.read_csv('data/t_davidson_hate_speech_and_offensive_language.csv', index_col=0)
+    df1 = pd.read_csv('data/t_davidson_hate_speech_and_offensive_language.csv', index_col=0)
+    df2 = pd.read_csv('data/vicomtech_hate_speech_dataset.csv', index_col=0)
+    df = df1.append(df2, ignore_index=True)
     plot_categories(df)
 
     sentences = df['tweet']
@@ -28,8 +30,9 @@ if __name__ == '__main__':
 
     # initialize sklearn preprocessing pipeline
     nltk_stop_words = pd.read_csv('data/nltk_stop_words.csv', header=None).iloc[0].tolist()
+    custom_stop_words = pd.read_csv('data/custom_stop_words.csv', header=None).iloc[0].tolist()
     preprocess_pipeline = Pipeline(steps=[
-        ('normalize', TextPreprocessor(custom_stop_words=nltk_stop_words + ['rt', 'amp', 'ai', 'nt', 'na'])),
+        ('normalize', TextPreprocessor(custom_stop_words=nltk_stop_words + custom_stop_words)),
         ('features', TextVectorizer(enable_plots=True)),
     ])
 

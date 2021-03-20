@@ -127,31 +127,32 @@ def explain_observation(observation_dict: dict, nlp_dict: dict, top=5, figsize=(
 
 def export_all(classifier: LSTMClassifierModel, vectorizer: TextVectorizer, folder_out_path: str):
     def handle_exist(path, file_name):
-        if os.path.exists(path):
+        if os.path.exists(os.path.join(path, file_name)):
             print(f'{path} already contains a file named "{file_name}"!')
-            return
+            return True
+        return False
 
     os.makedirs(folder_out_path, exist_ok=True)
 
     # save keras model
-    handle_exist(folder_out_path, 'hate_classifier.h5')
-    model_out_path = os.path.join(folder_out_path, 'hate_classifier.h5')
-    classifier.model.save(model_out_path)
+    if not handle_exist(folder_out_path, 'hate_classifier.h5'):
+        model_out_path = os.path.join(folder_out_path, 'hate_classifier.h5')
+        classifier.model.save(model_out_path)
 
     # save label mapping
-    handle_exist(folder_out_path, 'y_labels.pickle')
-    y_labels_out_path = os.path.join(folder_out_path, 'y_labels.pickle')
-    with open(y_labels_out_path, 'wb') as handle:
-        pickle.dump(classifier.dic_y_mapping, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    if not handle_exist(folder_out_path, 'y_labels.pickle'):
+        y_labels_out_path = os.path.join(folder_out_path, 'y_labels.pickle')
+        with open(y_labels_out_path, 'wb') as handle:
+            pickle.dump(classifier.dic_y_mapping, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     # save tokenizer
-    handle_exist(folder_out_path, 'tokenizer.pickle')
-    tokenizer_out_path = os.path.join(folder_out_path, 'tokenizer.pickle')
-    with open(tokenizer_out_path, 'wb') as handle:
-        pickle.dump(vectorizer.fitted_tokenizer, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    if not handle_exist(folder_out_path, 'tokenizer.pickle'):
+        tokenizer_out_path = os.path.join(folder_out_path, 'tokenizer.pickle')
+        with open(tokenizer_out_path, 'wb') as handle:
+            pickle.dump(vectorizer.fitted_tokenizer, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     # save ngram detectors
-    handle_exist(folder_out_path, 'ngrams_detectors.pickle')
-    detectors_out_path = os.path.join(folder_out_path, 'ngrams_detectors.pickle')
-    with open(detectors_out_path, 'wb') as handle:
-        pickle.dump(vectorizer.ngrams_detector_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    if not handle_exist(folder_out_path, 'ngrams_detectors.pickle'):
+        detectors_out_path = os.path.join(folder_out_path, 'ngrams_detectors.pickle')
+        with open(detectors_out_path, 'wb') as handle:
+            pickle.dump(vectorizer.ngrams_detector_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
