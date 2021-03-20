@@ -48,9 +48,9 @@ class TextPreprocessor(BaseEstimator, TransformerMixin):
         if self._nlp is None:
             # load spacy language vectors
             self._nlp = spacy.load('en_core_web_lg')
-            for stop_word in self.custom_stop_words:
-                self._nlp.vocab[stop_word].is_stop = True
-            # self._nlp.Defaults.stop_words |= set(self.custom_stop_words)
+            # for stop_word in self.custom_stop_words:
+            #     self._nlp.vocab[stop_word].is_stop = True
+            self._nlp.Defaults.stop_words |= set(self.custom_stop_words)
         return self._nlp
 
     def fit(self, X, y=None):

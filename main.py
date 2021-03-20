@@ -30,7 +30,7 @@ if __name__ == '__main__':
     nltk_stop_words = pd.read_csv('data/nltk_stop_words.csv', header=None).iloc[0].tolist()
     preprocess_pipeline = Pipeline(steps=[
         ('normalize', TextPreprocessor(custom_stop_words=nltk_stop_words + ['rt', 'amp', 'ai', 'nt', 'na'])),
-        ('features', TextVectorizer()),
+        ('features', TextVectorizer(enable_plots=True)),
     ])
 
     # initialize sklearn classifier pipeline

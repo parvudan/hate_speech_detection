@@ -2,37 +2,38 @@ import numpy as np
 import matplotlib.pyplot as plt
 from keras import layers, models
 from sklearn.base import ClassifierMixin, BaseEstimator
+from typing import List, Union, Optional, Tuple
 
 
 class LSTMClassifierModel(BaseEstimator, ClassifierMixin):
-    def __init__(self, encode_y: bool = False, model=None, epochs: int = 10, batch_size: int = 256):
+    def __init__(self, encode_y: bool = False, classes_mapping: dict = None, model=None, epochs: int = 10, batch_size: int = 256):
         self.epochs = epochs
         self.batch_size = batch_size
         self._model = model
         self.encode_y = encode_y
-        self.dic_y_mapping = None
+        self.dic_y_mapping = classes_mapping
 
     @property
     def model(self):
         return self._model
 
-    def _compile_model(self, X_train, y_train, embeddings):
+    def _compile_model(self, input_shape: int, output_shape: int, embeddings_array: np.array):
         # Embedding network with Bi-LSTM and Attention layers (for attention explainer)
-        x_in = layers.Input(shape=(X_train.shape[1],))
+        x_in = layers.Input(shape=(input_shape,))
 
         # embedding
-        x = layers.Embedding(input_dim=embeddings.shape[0], output_dim=embeddings.shape[1], weights=[embeddings],
-                             input_length=X_train.shape[1], trainable=False)(x_in)
+        x = layers.Embedding(input_dim=embeddings_array.shape[0], output_dim=embeddings_array.shape[1], weights=[embeddings_array],
+                             input_length=input_shape, trainable=False)(x_in)
         # attention
 
         x = layers.Attention()([x, x])
         # 2 layers of bidirectional lstm
-        x = layers.Bidirectional(layers.LSTM(units=X_train.shape[1], dropout=0.2, return_sequences=True))(x)
-        x = layers.Bidirectional(layers.LSTM(units=X_train.shape[1], dropout=0.2))(x)
+        x = layers.Bidirectional(layers.LSTM(units=input_shape, dropout=0.2, return_sequences=True))(x)
+        x = layers.Bidirectional(layers.LSTM(units=input_shape, dropout=0.2))(x)
 
         # final dense layers
         x = layers.Dense(64, activation='relu')(x)
-        y_out = layers.Dense(len(np.unique(y_train)), activation='softmax')(x)
+        y_out = layers.Dense(output_shape, activation='softmax')(x)
 
         # compile
         model = models.Model(x_in, y_out)
@@ -96,14 +97,14 @@ class LSTMClassifierModel(BaseEstimator, ClassifierMixin):
         print(self.dic_y_mapping)
 
         if self.model is None:
-            self._compile_model(X_train, y_train, weights)
+            self._compile_model(X_train.shape[1], len(np.unique(y_train)), weights)
 
         self.train(X_train, y_train)
 
         return self
 
-    def predict(self, X):
+    def predict(self, X) -> Tuple[np.array, List[Union[int, str]]]:
         predicted_prob = self.model.predict(X)
-        predicted = [self.dic_y_mapping[np.argmax(pred)] if self.encode_y else np.argmax(pred) for pred in predicted_prob]
+        predicted = [self.dic_y_mapping[np.argmax(pred)] if self.dic_y_mapping else np.argmax(pred) for pred in predicted_prob]
 
         return predicted_prob, predicted
